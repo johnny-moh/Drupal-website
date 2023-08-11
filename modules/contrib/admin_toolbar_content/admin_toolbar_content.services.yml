@@ -1,0 +1,4 @@
+services:
+  admin_toolbar_content.manager:
+    class: Drupal\admin_toolbar_content\AdminToolbarContentPluginManager
+    arguments: ['@container.namespaces', '@cache.discovery', '@module_handler']

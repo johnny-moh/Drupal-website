@@ -1,0 +1,59 @@
+<?php
+
+/**
+ * Initialise the new configuration settings to their defaults.
+ */
+function admin_toolbar_content_update_9000() {
+  $config = \Drupal::configFactory()->getEditable('admin_toolbar_content.settings');
+  $config->set('recent_items', $config->get('recent_items') ?? 10);
+  $config->set('hide_non_content_items', $config->get('hide_non_content_items') ?? 1);
+  $config->set('show_account_link', $config->get('show_account_link') ?? '');
+  $config->set('enhance_content_item', $config->get('enhance_content_item') ?? 1);
+  $config->set('show_categories_item', $config->get('show_categories_item') ?? 1);
+  $config->set('show_media_item', $config->get('show_media_item') ?? 1);
+  $config->set('show_webforms_item', $config->get('show_webforms_item') ?? 1);
+  $config->save();
+
+  // Clear cache so admin menu can rebuild.
+  \Drupal::service('plugin.manager.menu.link')->rebuild();
+}
+
+/**
+ * Migrate config settings to v2.
+ */
+function admin_toolbar_content_update_9001() {
+  $config = \Drupal::configFactory()->getEditable('admin_toolbar_content.settings');
+
+  $data = [
+    'common' => [
+      'group_collections' => $config->get('group_collections') ?? '',
+    ],
+    'content' => [
+      'enabled' => $config->get('enhance_content_item') ?? 1,
+      'recent_items' => $config->get('recent_items') ?? 5,
+      'recent_items_link' => $config->get('recent_items_link') ?? 'default',
+      'hide_non_content_items' => $config->get('hide_non_content_items') ?? 1,
+    ],
+    'categories' => [
+      'enabled' => $config->get('show_categories_item') ?? 1,
+    ],
+    'media' => [
+      'enabled' => $config->get('show_media_item') ?? 1,
+      'link_media_library' => 1
+    ],
+    'webforms' => [
+      'enabled' => $config->get('show_webforms_item') ?? 1,
+    ],
+    'menus' => [
+      'enabled' => $config->get('show_menus_item') ?? 1,
+    ],
+    'drupal' => [
+      'enabled' => 1,
+      'account_links' => $config->get('show_account_link') ?? 'both',
+    ]
+  ];
+
+  $config->setData($data);
+  $config->save();
+
+}

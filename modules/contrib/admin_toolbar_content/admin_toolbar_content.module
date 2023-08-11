@@ -1,0 +1,197 @@
+<?php
+
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Url;
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function admin_toolbar_content_help($route_name, RouteMatchInterface $route_match): string {
+  $output = "";
+
+  if ($route_name == 'help.page.admin_toolbar_content') {
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('This module extends the admin toolbar for a better content administration experience.') . '</p>';
+  }
+
+  return $output;
+}
+
+/**
+ * Implements hook_page_attachments().
+ */
+function admin_toolbar_content_page_attachments(&$page): void {
+  $page['#attached']['library'][] = 'admin_toolbar_content/global';
+}
+
+/**
+ * Implements hook_module_implements_alter().
+ */
+function admin_toolbar_content_module_implements_alter(&$implementations, $hook): void {
+  if ($hook == 'menu_links_discovered_alter') {
+    $settings = $implementations['admin_toolbar_content'];
+    unset($implementations['admin_toolbar_content']);
+    $implementations['admin_toolbar_content'] = $settings;
+  }
+}
+
+/**
+ * Implements hook_menu_links_discovered_alter();
+ */
+function admin_toolbar_content_menu_links_discovered_alter(array &$links): void {
+  $pluginManager = \Drupal::service('admin_toolbar_content.manager');
+  $pluginManager->menuLinksDiscoveredAlter($links);
+}
+
+/**
+ * Implements hook_preprocess_menu().
+ */
+function admin_toolbar_content_preprocess_menu(&$variables): void {
+
+  if (empty($variables['items'])
+    || !isset($variables['menu_name'])
+    || $variables['menu_name'] !== 'admin') {
+    return;
+  }
+
+  $pluginManager = \Drupal::service('admin_toolbar_content.manager');
+  $pluginManager->preprocessMenu($variables);
+}
+
+/**
+ * Implements hook_preprocess_menu_local_action().
+ */
+function admin_toolbar_content_preprocess_menu_local_action(&$variables): void {
+
+  // Alters the 'Add new content' button to a specific 'Add new <content type>'
+  // button.
+
+  $type = \Drupal::request()->get('type');
+
+  /** @var \Drupal\Core\Url $url */
+  $url = $variables['element']['#link']['url'];
+  $route = $url->getRouteName();
+  $cache = false;
+
+  switch($route) {
+
+    case 'node.add_page':
+      $route_name = 'node.add';
+      $entity_type_id = 'node_type';
+      $cache = true;
+
+      break;
+
+    case 'entity.media.add_page':
+      $route_name = 'entity.media.add_form';
+      $entity_type_id = 'media_type';
+      $cache = true;
+
+      break;
+
+    default:
+      return;
+  }
+
+  if ($type) {
+    /** @var \Drupal\Core\Entity\EntityStorageInterface $storage */
+    $storage = \Drupal::service('entity_type.manager')->getStorage($entity_type_id);
+
+    $url = Url::fromRoute($route_name, [$entity_type_id => $type]);
+    $contentType = $storage->load($type);
+
+    if ($contentType) {
+      if ($url->access()) {
+        $label = t('Add @entity-type', ['@entity-type' => $contentType->label()]);
+        $variables['element']['#link']['title'] = $label;
+        $variables['element']['#link']['url'] = $url;
+        $variables['link']['#title'] = $label;
+        $variables['link']['#url'] = $url;
+      }
+      else {
+        $variables['element']['#access'] = AccessResult::forbidden();
+        $variables['link']['#access'] = AccessResult::forbidden();
+      }
+    }
+  }
+
+  if ($cache) {
+    $variables['element']['#cache']['contexts'][] = 'url.query_args:type';
+    $variables['link']['#cache']['contexts'][] = 'url.query_args:type';
+  }
+
+}
+
+/**
+ * Implements hook_preprocess_block().
+ */
+function admin_toolbar_content_preprocess_block(&$variables): void {
+
+  // Changes the title if a type filter is added to the admin content page.
+
+  if ('page_title_block' == $variables['plugin_id']) {
+    $request = \Drupal::request();
+    $path = $request->getRequestUri();
+
+    if(strpos($path, 'admin/content')) {
+      //check current path is user profile page
+
+      $content_type = $request->get('type');
+
+      if ($content_type) {
+
+        /** @var \Drupal\Core\Entity\EntityStorageInterface $storage */
+        $storage = \Drupal::service('entity_type.manager')->getStorage('node_type');
+        $contentType = $storage->load($content_type);
+
+        if ($contentType) {
+          if (is_array($variables['content']['#title'])) {
+            $variables['content']['#title']['#markup'] = $variables['content']['#title']['#markup']. " - " . $contentType->label();
+          }
+          //else {
+            // It's of type: 'Drupal\Core\Render\Markup' (probably)
+            // Is in the case of for example an 403.
+            // We do not change the markup then because it's useless.
+          //}
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_element_info_alter().
+ *
+ * @see admin_toolbar_content_views_pre_render_callback()
+ *
+ * @param $types
+ */
+function admin_toolbar_content_element_info_alter(&$types): void {
+  array_unshift($types['view']['#pre_render'], [
+    'Drupal\admin_toolbar_content\AlternativeContentView',
+    'preRender'
+  ]);
+}
+
+/**
+ * Implements hook_entity_insert().
+ */
+function admin_toolbar_content_entity_insert(EntityInterface $entity): void {
+  \Drupal::service('admin_toolbar_content.manager')->menuLinkRebuild($entity);
+}
+
+/**
+ * Implements hook_entity_update().
+ */
+function admin_toolbar_content_entity_update(EntityInterface $entity): void {
+  \Drupal::service('admin_toolbar_content.manager')->menuLinkRebuild($entity);
+}
+
+/**
+ * Implements hook_entity_delete().
+ */
+function admin_toolbar_content_entity_delete(EntityInterface $entity): void {
+  \Drupal::service('admin_toolbar_content.manager')->menuLinkRebuild($entity);
+}

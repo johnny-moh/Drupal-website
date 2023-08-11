@@ -1,0 +1,11 @@
+admin_toolbar_content.settings:
+  type: config_object
+  label: 'Admin toolbar content settings'
+  mapping:
+    common:
+      type: mapping
+      label: 'Common'
+      mapping:
+        group_collections:
+          type: string
+          label: 'Group collections'

@@ -1,0 +1,8 @@
+admin_toolbar_content.settings:
+  title: 'Admin Toolbar Content'
+  route_name: admin_toolbar_content.settings
+  menu_name: admin
+  parent: system.admin_config_ui
+
+admin_toolbar_content.menu_links:
+  deriver: \Drupal\admin_toolbar_content\Plugin\Derivative\AdminToolbarContentMenuLinks

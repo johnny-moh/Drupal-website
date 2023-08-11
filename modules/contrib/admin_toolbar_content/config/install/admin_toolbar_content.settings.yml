@@ -1,0 +1,20 @@
+langcode: 'en'
+common:
+  group_collections: ''
+content:
+  enabled: 1
+  recent_items: 5
+  recent_items_link: 'default'
+  hide_non_content_items: 1
+categories:
+  enabled: 1
+media:
+  enabled: 1
+  link_media_library: 1
+webforms:
+  enabled: 1
+menus:
+  enabled: 1
+drupal:
+  enabled: 1
+  account_links: 'both'
